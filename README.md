@@ -6,25 +6,28 @@ This guide walks you through local setup and running the project in development 
 
 - Python 3.10+ installed
 - Bun installed
-- Jupyter support (for running the setup notebook)
 
-## 1) Backend Python Dependencies
+## 1) Run Repository Setup
 
-From the project root, install backend dependencies:
+From the project root, run the setup script to install dependencies and download models:
 
 ```powershell
-pip install -r requirements.txt
+python setup.py
 ```
 
-## 2) Run the Setup Notebook
+This will:
+- Install Python dependencies from requirements.txt
+- Download NLTK packages (punkt, stopwords, wordnet, averaged_perceptron_tagger)
+- Download spaCy en_core_web_sm model
+- Initialize the SQLite database with skills and chunks stores
 
-Open and run all cells in:
+Optional setup flags:
+- `python setup.py --skip-install` — Skip pip dependencies
+- `python setup.py --skip-nltk` — Skip NLTK downloads
+- `python setup.py --skip-spacy` — Skip spaCy model download
+- `python setup.py --skip-db` — Skip database initialization
 
-- notebooks/setup.ipynb
-
-This prepares local resources required by the project.
-
-## 3) Frontend Install
+## 2) Frontend Install
 
 Install frontend dependencies:
 
@@ -33,7 +36,7 @@ cd frontend
 bun install
 ```
 
-## 4) Start Development Servers
+## 3) Start Development Servers
 
 Use two terminals.
 
