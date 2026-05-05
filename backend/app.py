@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, abort
 app = Flask(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SKILLS_CORPUS_DIR = BASE_DIR / 'skills' / '.corpus'
+SKILLS_CORPUS_DIR = BASE_DIR / 'skills' / 'corpus'
 SKILLS_CORPUS_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_FOLDER_CHARS = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_')

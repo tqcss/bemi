@@ -1,1 +1,76 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-bg-primary: #343541;
+  --color-bg-secondary: #444654;
+  --color-bg-sidebar: #202123;
+  --color-bg-input: #40414f;
+  --color-bg-hover: #2a2b32;
+  --color-border: #4d4d4f;
+  --color-text-primary: #ececf1;
+  --color-text-secondary: #8e8ea0;
+  --color-accent: #19c37d;
+  --color-accent-hover: #1a8870;
+  --color-user-bubble: #19c37d;
+  --color-assistant-bubble: #444654;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: #343541;
+  color: #ececf1;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #565869;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b6d7b;
+}
+
+/* Markdown-like styling for assistant messages */
+.prose pre {
+  background-color: #1e1e2e;
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.prose code {
+  background-color: #1e1e2e;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.prose p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.prose strong {
+  color: #ececf1;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s infinite;
+}

@@ -39,7 +39,7 @@ const ImportModal: Component<ImportModalProps> = (props) => {
       setError('Please enter a folder name');
       return;
     }
-    
+
     const file = selectedFile();
     if (!file) {
       setError('Please select SKILL.md file');
@@ -62,17 +62,17 @@ const ImportModal: Component<ImportModalProps> = (props) => {
 
   return (
     <Show when={props.isOpen}>
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pointer-events-auto">
-        <div class="bg-white rounded-lg p-6 w-96 shadow-lg pointer-events-auto">
-          <h2 class="text-xl font-bold mb-4 text-gray-800">Import Skill Folder</h2>
+      <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-bg-secondary rounded-xl p-6 w-[420px] shadow-2xl border border-border">
+          <h2 class="text-lg font-semibold mb-4 text-text-primary">Import Skill Folder</h2>
           <Show when={error()}>
-            <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">
+            <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
               {error()}
             </div>
           </Show>
 
           <div class="mb-4">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-text-secondary mb-2">
               Folder Name
             </label>
             <input
@@ -80,42 +80,48 @@ const ImportModal: Component<ImportModalProps> = (props) => {
               value={folderName()}
               onInput={(e) => setFolderName(e.currentTarget.value)}
               placeholder="e.g., math-utilities, nlp-tools"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 text-text-primary text-sm placeholder-text-secondary/50"
             />
           </div>
 
-          <div class="mb-4">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-text-secondary mb-2">
               Select SKILL.md File
             </label>
-            <label class="block border border-gray-300 rounded-lg p-2 cursor-pointer hover:bg-gray-50">
+            <label class="block border-2 border-dashed border-border rounded-lg p-4 cursor-pointer hover:bg-bg-hover hover:border-accent/50 transition-colors text-center">
               <input
                 type="file"
                 accept=".md"
                 onChange={handleFileSelect}
                 class="hidden"
               />
-              <span class="text-gray-600">Click to select SKILL.md file</span>
+              <svg class="w-8 h-8 mx-auto mb-2 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <span class="text-sm text-text-secondary">Click to upload SKILL.md</span>
             </label>
             <Show when={selectedFile()}>
-              <div class="mt-2">
-                <p class="text-sm text-green-600 font-semibold">✓ Selected: {selectedFile()?.name}</p>
+              <div class="mt-2 flex items-center gap-2 text-sm text-accent">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                {selectedFile()?.name}
               </div>
             </Show>
           </div>
 
-          <div class="flex gap-2 justify-end">
+          <div class="flex gap-3 justify-end">
             <button
               onClick={() => props.onClose()}
               disabled={isLoading()}
-              class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+              class="px-4 py-2 bg-bg-primary border border-border text-text-secondary rounded-lg hover:bg-bg-hover transition-colors text-sm"
             >
               Cancel
             </button>
             <button
               onClick={handleImport}
               disabled={isLoading()}
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              class="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors text-sm font-medium disabled:opacity-50"
             >
               {isLoading() ? 'Importing...' : 'Import'}
             </button>
@@ -138,16 +144,18 @@ interface SkillFolder {
 
 interface SidebarProps {
   folders: SkillFolder[];
-
   onDeleteFolder: (id: string) => void;
   onImportFolder: (folderName: string, skillMdContent: string) => Promise<void>;
   onAddScript: (folderId: string, script: Script) => void;
   onRemoveScript: (folderId: string, scriptId: string) => void;
+  onNewChat: () => void;
+  onToggleSidebar: () => void;
 }
 
 const Sidebar: Component<SidebarProps> = (props) => {
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set());
+  const [hoveredFolder, setHoveredFolder] = createSignal<string | null>(null);
 
   const toggleFolder = (folderId: string) => {
     const expanded = new Set(expandedFolders());
@@ -165,7 +173,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
         console.error('SKILL.md content is empty');
         return;
       }
-
       await props.onImportFolder(folderName, skillMdContent);
       setShowImportModal(false);
     } catch (error) {
@@ -194,124 +201,154 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
   return (
     <>
-      <div class="w-72 bg-gray-800 text-white h-screen flex flex-col">
-        {/* Header */}
-        <div class="p-4 border-b border-gray-700">
-          <h2 class="text-lg font-bold">Skills & Knowledge</h2>
-        </div>
-
-        {/* Import Button */}
-        <div class="p-4 border-b border-gray-700">
+      <div class="w-[260px] bg-bg-sidebar text-text-primary h-screen flex flex-col border-r border-border/30">
+        {/* New Chat Button */}
+        <div class="p-3">
           <button
-            onClick={() => setShowImportModal(true)}
-            class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+            onClick={props.onNewChat}
+            class="w-full flex items-center gap-3 px-3 py-3 border border-border/50 rounded-lg hover:bg-bg-hover transition-colors text-sm font-medium"
           >
-            + Import Skill Folder
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New chat
           </button>
         </div>
 
-        {/* Skill Folders List */}
-        <div class="flex-1 overflow-y-auto p-4">
+        {/* Close Sidebar Button (mobile) */}
+        <div class="px-3 pb-2">
+          <button
+            onClick={props.onToggleSidebar}
+            class="w-full flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors text-sm"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+            Close sidebar
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-3 py-2">
+          {/* Section Header */}
+          <div class="flex items-center justify-between mb-2 px-2">
+            <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Skills & Knowledge</h3>
+            <span class="text-xs text-text-secondary/60">{props.folders.length}</span>
+          </div>
+
           <Show
             when={props.folders.length > 0}
             fallback={
-              <p class="text-gray-400 text-sm">
-                No skill folders imported yet. Click "Import Skill Folder" to get started.
-              </p>
+              <div class="px-2 py-4 text-center">
+                <svg class="w-8 h-8 mx-auto mb-2 text-text-secondary/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <p class="text-xs text-text-secondary/60 leading-relaxed">
+                  No skills imported yet.<br/>Import a folder to get started.
+                </p>
+              </div>
             }
           >
-            <div class="space-y-2">
+            <div class="space-y-1">
               <For each={props.folders}>
                 {(folder) => {
                   const isExpanded = () => expandedFolders().has(folder.id);
 
                   return (
-                    <div class="border border-gray-700 rounded-lg overflow-hidden">
+                    <div 
+                      class="rounded-lg overflow-hidden border border-transparent hover:border-border/50 transition-colors"
+                      onMouseEnter={() => setHoveredFolder(folder.id)}
+                      onMouseLeave={() => setHoveredFolder(null)}
+                    >
                       {/* Folder Header */}
-                      <div class="p-3 bg-gray-700 hover:bg-gray-600 transition">
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-2 flex-1">
-                            <button
-                              onClick={() => toggleFolder(folder.id)}
-                              class="text-gray-400 hover:text-white"
-                            >
-                              {isExpanded() ? '▼' : '▶'}
-                            </button>
-                            <div class="flex-1 min-w-0">
-                              <p class="text-sm font-semibold truncate">{folder.folderName}</p>
-                              <p class="text-xs text-gray-300">SKILL.md ({folder.skillMd.content.split('\n').length} lines)</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              props.onDeleteFolder(folder.id);
-                            }}
-                            class="ml-2 px-2 py-1 bg-red-600 rounded text-xs opacity-0 hover:opacity-100 hover:bg-red-700 transition"
+                      <div class="flex items-center gap-2 px-2 py-2 hover:bg-bg-hover transition-colors cursor-pointer">
+                        <button
+                          onClick={() => toggleFolder(folder.id)}
+                          class="text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                          <svg 
+                            class={`w-4 h-4 transition-transform ${isExpanded() ? 'rotate-90' : ''}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
                           >
-                            Delete
-                          </button>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm text-text-primary truncate">{folder.folderName}</p>
+                          <p class="text-xs text-text-secondary/60">
+                            {folder.scripts.length} script{folder.scripts.length !== 1 ? 's' : ''}
+                          </p>
                         </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete "${folder.folderName}"?`)) {
+                              props.onDeleteFolder(folder.id);
+                            }
+                          }}
+                          class={`p-1 rounded transition-all ${
+                            hoveredFolder() === folder.id 
+                              ? 'opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10' 
+                              : 'opacity-0'
+                          }`}
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
 
                       {/* Folder Contents */}
                       <Show when={isExpanded()}>
-                        <div class="bg-gray-900 p-3 space-y-2 border-t border-gray-700">
-                          {/* SKILL.md File */}
-                          <div class="bg-gray-800 p-2 rounded">
-                            <p class="text-xs text-yellow-400 font-semibold">📄 SKILL.md</p>
-                            <p class="text-xs text-gray-500 pl-4">
-                              {folder.skillMd.content.split('\n').length} lines
-                            </p>
+                        <div class="bg-bg-primary/50 px-2 py-2 space-y-1">
+                          {/* SKILL.md */}
+                          <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-secondary/50">
+                            <svg class="w-4 h-4 text-yellow-500/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span class="text-xs text-text-secondary truncate">SKILL.md</span>
+                            <span class="text-xs text-text-secondary/40 ml-auto">{folder.skillMd.content.split('\n').length} lines</span>
                           </div>
 
-                          {/* Scripts Folder */}
-                          <div class="border border-gray-700 rounded">
-                            <div class="bg-gray-800 p-2">
-                              <p class="text-xs text-blue-400 font-semibold">📁 scripts/</p>
+                          {/* Scripts */}
+                          <Show when={folder.scripts.length > 0}>
+                            <div class="space-y-0.5">
+                              <For each={folder.scripts}>
+                                {(script) => (
+                                  <div class="group flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-hover transition-colors">
+                                    <svg class="w-4 h-4 text-blue-400/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                    </svg>
+                                    <span class="text-xs text-text-secondary/80 truncate flex-1">{script.name}</span>
+                                    <button
+                                      onClick={() => props.onRemoveScript(folder.id, script.id)}
+                                      class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-all"
+                                    >
+                                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                )}
+                              </For>
                             </div>
-                            <Show
-                              when={folder.scripts.length > 0}
-                              fallback={
-                                <p class="text-gray-500 text-xs italic p-2">No scripts added</p>
-                              }
-                            >
-                              <div class="space-y-1 p-2 bg-gray-900 border-t border-gray-700">
-                                <For each={folder.scripts}>
-                                  {(script) => (
-                                    <div class="flex items-center justify-between bg-gray-800 p-2 rounded group">
-                                      <div class="flex-1 min-w-0">
-                                        <p class="text-xs truncate text-gray-300">📜 {script.name}</p>
-                                        <p class="text-xs text-gray-500 pl-4">.{script.extension}</p>
-                                      </div>
-                                      <button
-                                        onClick={() =>
-                                          props.onRemoveScript(folder.id, script.id)
-                                        }
-                                        class="ml-2 px-1.5 py-0.5 bg-red-600 rounded text-xs opacity-0 group-hover:opacity-100 hover:bg-red-700 transition"
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
-                                  )}
-                                </For>
-                              </div>
-                            </Show>
+                          </Show>
 
-                            {/* Add Script Button */}
-                            <div class="p-2 border-t border-gray-700">
-                              <label class="block">
-                                <input
-                                  type="file"
-                                  onChange={(e) => handleAddScript(folder.id, e)}
-                                  class="hidden"
-                                />
-                                <span class="block text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded cursor-pointer text-center">
-                                  + Add Script
-                                </span>
-                              </label>
-                            </div>
-                          </div>
+                          {/* Add Script */}
+                          <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-hover transition-colors cursor-pointer text-text-secondary/60 hover:text-text-secondary">
+                            <input
+                              type="file"
+                              onChange={(e) => handleAddScript(folder.id, e)}
+                              class="hidden"
+                            />
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span class="text-xs">Add script</span>
+                          </label>
                         </div>
                       </Show>
                     </div>
@@ -320,6 +357,19 @@ const Sidebar: Component<SidebarProps> = (props) => {
               </For>
             </div>
           </Show>
+        </div>
+
+        {/* Bottom Actions */}
+        <div class="p-3 border-t border-border/30 space-y-1">
+          <button
+            onClick={() => setShowImportModal(true)}
+            class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-bg-hover rounded-lg transition-colors text-sm text-text-secondary hover:text-text-primary"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Import Skill Folder
+          </button>
         </div>
       </div>
 
