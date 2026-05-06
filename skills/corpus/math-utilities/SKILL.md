@@ -1,169 +1,240 @@
 ---
-name: "math-utilities"
-description: "Performs common mathematical operations including addition, subtraction, multiplication, division, mean calculation, and factorial computation."
+name: math-utilities
+version: 1.0.0
+description: >
+  Solves arithmetic problems, calculates averages, and computes factorials.
+  Triggered when users need to add, subtract, multiply, or divide numbers, find a mean, or solve a math equation.
+triggers:
+  - math
+  - calculate
+  - add
+  - subtract
+  - divide
+  - multiply
+  - mean
+  - average
+  - factorial
 tags:
-  - "math"
-  - "arithmetic"
-  - "utilities"
-version: "1.0.0"
-author: "BEMI"
-network_allowed: false
+  - math
+  - logic
+  - calculator
+execution:
+  enabled: true
+  runtime: python
+  timeout_seconds: 5
+  allow_network: false
+  allow_filesystem: false
+  memory_limit_mb: 64
+  entrypoint: run
+context:
+  inject_before_llm: true
+  output_label: "Calculation result"
+author: bemi-core
+created: 2026-05-06
+updated: 2026-05-06
+enabled: true
 ---
 
-## Overview
-This skill handles everyday mathematical computations. It covers the six foundational operations most frequently requested by users: addition, subtraction, multiplication, division, arithmetic mean, and factorial. Each operation is self-contained and returns a clearly formatted numeric result. Use this skill whenever a user provides numbers and asks for a calculation — whether phrased casually ("what's 18 times 4?") or formally ("compute the factorial of 7").
+## Purpose
 
-## Capabilities
-- Add two or more numbers together
-- Subtract one number from another
-- Multiply two or more numbers
-- Divide a numerator by a denominator (with zero-division protection)
-- Compute the arithmetic mean of a list of numbers
-- Compute the factorial of a non-negative integer
+Performs fundamental mathematical operations with high precision. This skill handles arithmetic for single pairs or lists of numbers, computes the statistical mean (average), and solves factorials for non-negative integers.
 
-### Inputs
-- One or more numeric values (integers or floats)
-- The name of the desired operation (add, subtract, multiply, divide, mean, factorial)
+## Parameters
 
-### Outputs
-- A single numeric result
-- A brief natural-language sentence describing the computation performed
+The LLM should extract the following:
 
----
+- `operation` (string, required) — "add", "subtract", "multiply", "divide", "mean", or "factorial"
+- `values` (list of floats, required) — The numbers to be used in the calculation
+- `n` (int, optional) — Used specifically for factorial operations
 
-## Instructions
-
-### When to Use
-- If the user asks to add, sum, subtract, multiply, divide, or average numbers
-- If the user requests a factorial of any whole number
-- When the user provides a list of numbers and wants a computed result
-- If the task involves a simple arithmetic expression that does not require a full calculator interface
-
-### How to Respond
-1. Identify the operation from the user's phrasing.
-2. Extract all numeric operands.
-3. Execute the appropriate inline function.
-4. Return the result in a single sentence, e.g. "The sum of 12 and 7 is **19**."
-
-### Constraints
-- Division by zero must return a clear error message, not an exception traceback.
-- Factorial is only defined for non-negative integers; reject floats and negatives with an explanation.
-- Do not use external math libraries; rely on Python's standard library only.
-
----
-
-## Execution
-
-### Inline Function
-
+## Code
 ```python
-def execute(input_data):
-    """
-    input_data: dict with keys 'operation' (str) and 'operands' (list of numbers)
-    Supported operations: add, subtract, multiply, divide, mean, factorial
-    """
-    import math
+import math
 
-    op = input_data.get("operation", "").lower().strip()
-    operands = input_data.get("operands", [])
+def run(operation: str, values: list = None, n: int = None) -> dict:
+    if operation == "factorial":
+        if n is None or n < 0:
+            return {"error": "Factorial requires a non-negative integer 'n'."}
+        return {"result": math.factorial(n)}
+    
+    if not values:
+        return {"error": "No values provided for calculation."}
 
-    if op == "add":
-        result = sum(operands)
-        return {"result": result, "description": f"The sum is {result}."}
-
-    elif op == "subtract":
-        result = operands[0] - sum(operands[1:])
-        return {"result": result, "description": f"The difference is {result}."}
-
-    elif op == "multiply":
-        result = 1
-        for n in operands:
-            result *= n
-        return {"result": result, "description": f"The product is {result}."}
-
-    elif op == "divide":
-        if operands[1] == 0:
-            return {"result": None, "description": "Error: division by zero is undefined."}
-        result = operands[0] / operands[1]
-        return {"result": result, "description": f"The quotient is {result:.4f}."}
-
-    elif op == "mean":
-        result = sum(operands) / len(operands)
-        return {"result": result, "description": f"The mean is {result:.4f}."}
-
-    elif op == "factorial":
-        n = operands[0]
-        if not isinstance(n, int) or n < 0:
-            return {"result": None, "description": "Error: factorial requires a non-negative integer."}
-        result = math.factorial(n)
-        return {"result": result, "description": f"The factorial of {n} is {result}."}
-
-    else:
-        return {"result": None, "description": f"Unknown operation '{op}'."}
+    if operation == "add":
+        return {"result": sum(values)}
+    elif operation == "subtract":
+        res = values[0]
+        for v in values[1:]:
+            res -= v
+        return {"result": res}
+    elif operation == "multiply":
+        res = 1
+        for v in values:
+            res *= v
+        return {"result": res}
+    elif operation == "divide":
+        try:
+            res = values[0]
+            for v in values[1:]:
+                res /= v
+            return {"result": res}
+        except ZeroDivisionError:
+            return {"error": "Cannot divide by zero."}
+    elif operation == "mean":
+        return {"result": sum(values) / len(values)}
+    
+    return {"error": "Unsupported operation."}
 ```
-
----
+## Response guidance
+**For Math:** Always lead with the calculated number. Be precise but helpful (e.g., "The answer is 42"). If the result has many decimal places, round to two unless more are necessary for accuracy. For factorials, if the number is extremely large, use scientific notation.
 
 ## Examples
+**User:** What is 15 plus 27?
+**BEMI:** [runs code] 42 is the result of adding 15 and 27.
 
-### Example 1
+**User:** Subtract 50 from 125.
+**BEMI:** [runs code] 75 is the result of 125 minus 50.
 
-**User Input:**
-```
-What is 15 plus 27 plus 8?
-```
-**Expected Behavior:** Identify operation as "add", operands as [15, 27, 8], call execute.
+**User:** Multiply 12 by 8.
+**BEMI:** [runs code] 96 is the result.
 
-**Expected Output:**
-```
-The sum is 50.
-```
+**User:** Divide 100 by 4.
+**BEMI:** [runs code] 25 is the result of the division.
 
-### Example 2
+**User:** What is the average of 10, 20, 30, and 40?
+**BEMI:** [runs code] 25 is the mean of those four values.
 
-**User Input:**
-```
-Divide 144 by 12
-```
-**Expected Behavior:** Identify operation as "divide", operands as [144, 12].
+**User:** What is 5 factorial?
+**BEMI:** [runs code] 120 is the factorial of 5 (5!).
 
-**Expected Output:**
-```
-The quotient is 12.0000.
-```
+**User:** Add up 1.5, 2.5, and 3.
+**BEMI:** [runs code] 7.0 is the total.
 
-### Example 3
+**User:** What do I get if I multiply 0.5 by 10?
+**BEMI:** [runs code] 5.0 is the result.
 
-**User Input:**
-```
-What is the factorial of 7?
-```
-**Expected Behavior:** Identify operation as "factorial", operands as [7].
+**User:** Calculate the mean of 5, 5, 10, 20.
+**BEMI:** [runs code] 10.0 is the average.
 
-**Expected Output:**
-```
-The factorial of 7 is 5040.
-```
+**User:** What is 10 factorial?
+**BEMI:** [runs code] 3,628,800 is the result of 10!.
 
-### Example 4
+**User:** Divide 1 by 3.
+**BEMI:** [runs code] 0.33 is the result (rounded to two decimal places).
 
-**User Input:**
-```
-Find the mean of 4, 8, 15, 16, 23, 42
-```
-**Expected Behavior:** Identify operation as "mean", operands as [4, 8, 15, 16, 23, 42].
+**User:** Subtract 10, 5, and 2 from 100.
+**BEMI:** [runs code] 83 is the remaining value.
 
-**Expected Output:**
-```
-The mean is 18.0000.
-```
+**User:** What is 9 times 9?
+**BEMI:** [runs code] 81 is the result.
 
----
+**User:** Solve 45 + 55.
+**BEMI:** [runs code] 100 is the answer.
 
-## Notes
-- For "subtract", the first operand is the minuend; all subsequent operands are subtracted from it.
-- Float division is always used for divide; use integer-check separately if exact integer division is needed.
-- Factorial values grow very quickly; warn the user if n > 1000 as output may be extremely large.
+**User:** What is the average height if the kids are 120cm, 130cm, and 140cm?
+**BEMI:** [runs code] 130.0 cm is the mean height.
 
-## Retrieval Keywords
-arithmetic, calculate, sum, difference, product, quotient, average, mean, factorial, multiply, divide, add, subtract, compute, numbers, math operations
+**User:** What is 0 factorial?
+**BEMI:** [runs code] 1 is the result of 0!.
+
+**User:** Multiply 7, 3, and 2.
+**BEMI:** [runs code] 42 is the product of these numbers.
+
+**User:** What is 500 divided by 10?
+**BEMI:** [runs code] 50 is the result.
+
+**User:** Add 1234 and 5678.
+**BEMI:** [runs code] 6,912 is the total.
+
+**User:** What is the mean of 1 and 2?
+**BEMI:** [runs code] 1.5 is the average.
+
+**User:** Calculate 6 factorial.
+**BEMI:** [runs code] 720 is the result.
+
+**User:** Subtract 0.25 from 1.
+**BEMI:** [runs code] 0.75 is the result.
+
+**User:** Multiply 100 by 0.01.
+**BEMI:** [runs code] 1.0 is the result.
+
+**User:** Divide 250 by 5.
+**BEMI:** [runs code] 50 is the result.
+
+**User:** What is the sum of 10, 20, 30?
+**BEMI:** [runs code] 60 is the total.
+
+**User:** Find the average of 88, 92, and 95.
+**BEMI:** [runs code] 91.67 is the mean.
+
+**User:** What is 3 factorial?
+**BEMI:** [runs code] 6 is the result of 3 x 2 x 1.
+
+**User:** What is 15 multiplied by 15?
+**BEMI:** [runs code] 225 is the result.
+
+**User:** Subtract 1000 from 5000.
+**BEMI:** [runs code] 4,000 is the result.
+
+**User:** Add 0.1 and 0.2.
+**BEMI:** [runs code] 0.3 is the total.
+
+**User:** Divide 99 by 9.
+**BEMI:** [runs code] 11 is the result.
+
+**User:** What is the mean of 100 and 200?
+**BEMI:** [runs code] 150.0 is the average.
+
+**User:** What is 7 factorial?
+**BEMI:** [runs code] 5,040 is the answer.
+
+**User:** Multiply 1.1 by 10.
+**BEMI:** [runs code] 11.0 is the result.
+
+**User:** Subtract 5 from 5.
+**BEMI:** [runs code] 0 is the result.
+
+**User:** What is 8 divided by 2?
+**BEMI:** [runs code] 4 is the result.
+
+**User:** Sum these numbers: 10, 10, 10, 10, 10.
+**BEMI:** [runs code] 50 is the total.
+
+**User:** What is the average of 0 and 100?
+**BEMI:** [runs code] 50.0 is the mean.
+
+**User:** What is 4 factorial?
+**BEMI:** [runs code] 24 is the result.
+
+**User:** Multiply 25 by 4.
+**BEMI:** [runs code] 100 is the result.
+
+**User:** Subtract 15 from 10.
+**BEMI:** [runs code] -5 is the result.
+
+**User:** Divide 10 by 3.
+**BEMI:** [runs code] 3.33 is the result.
+
+**User:** What is the mean of 7, 8, 9?
+**BEMI:** [runs code] 8.0 is the average.
+
+**User:** Calculate 8 factorial.
+**BEMI:** [runs code] 40,320 is the result.
+
+**User:** Add 999 and 1.
+**BEMI:** [runs code] 1,000 is the total.
+
+**User:** Multiply 50 by 2.
+**BEMI:** [runs code] 100 is the result.
+
+**User:** Subtract 20 from 100.
+**BEMI:** [runs code] 80 is the result.
+
+**User:** Divide 144 by 12.
+**BEMI:** [runs code] 12 is the result.
+
+**User:** What is the mean of 12, 14, 16?
+**BEMI:** [runs code] 14.0 is the average.
+
+**User:** What is 1 factorial?
+**BEMI:** [runs code] 1 is the result.
