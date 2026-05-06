@@ -1,5 +1,5 @@
 ---
-name: forecast-retriever
+name: weather-forecast
 version: 1.0.0
 description: >
   Get the current weather and local forecasts for any city. 
