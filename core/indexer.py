@@ -10,7 +10,7 @@ from config import dir_path
 from config import embedding_model as embedding_config
 from util.dclass import ParsedSkill
 from util.skill_parser import parse_all_skills
-from util.preprocessor import preprocess_text, preprocess_skill_text
+from util.preprocessor import preprocess_text, preprocess_skill_text, preprocess_markdown
 
 
 _embedder = OllamaEmbeddings(model=embedding_config.MODEL_NAME)
@@ -65,7 +65,9 @@ def index_skill(skill: ParsedSkill) -> None:
 	# level 2: chunk vectors for pure data skills only
 	if not metadata.get('requires_execution', False):
 		prose = skill.prose
-		chunks = chunk_text(prose)
+		prose_cleaned = preprocess_markdown(prose)
+		chunks = chunk_text(prose_cleaned)
+
 		ids, embeddings, documents, metadatas = [], [], [], []
 
 		for index, chunk in enumerate(chunks):
