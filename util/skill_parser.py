@@ -63,9 +63,7 @@ def parse_skill(file_path: str) -> ParsedSkill:
 	'user':     user.strip(),
 	'context':  (context or '').strip(),
 	'response': response.strip(),
-	}
-	for user, context, response in example_pattern.findall(content)
-	]
+	} for user, context, response in example_pattern.findall(content) ]
 
 	prose_pattern = re.compile(
 		r'\s*Overview\s*\n(.*?)(?=\n\s*(?:Parameters?|Code|Examples?)\b|\Z)',
