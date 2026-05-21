@@ -62,8 +62,8 @@ def preprocess_text(text: str, *, is_markdown: bool=False) -> PreprocessedText:
 
 def preprocess_skill_text(skill: ParsedSkill) -> str:
 	metadata = skill.metadata
-	overview = skill.overview
-	description = metadata.get('description', '')[:500]
+	overview = skill.overview[:500] if skill.overview else ''
+	description = metadata.get('description', '')
 	prose = skill.prose
 	raw = f'{description} {overview} {prose}'.strip()
 	
