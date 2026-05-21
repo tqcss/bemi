@@ -6,14 +6,15 @@ from typing import List
 from warnings import warn
 from langchain_ollama import OllamaEmbeddings
 
-from config import embedding as embedding_config
+from config import dir_path
+from config import embedding_model as embedding_config
 from util.dclass import ParsedSkill
 from util.skill_parser import parse_all_skills
 from util.preprocessor import preprocess_text, preprocess_skill_text
 
 
-_embedder = OllamaEmbeddings(embedding_config.EMBED_MODEL)
-_client = chromadb.PersistentClient(path=embedding_config.CHROMA_DIR)
+_embedder = OllamaEmbeddings(model=embedding_config.MODEL_NAME)
+_client = chromadb.PersistentClient(path=dir_path.CHROMA_DIR)
 
 skill_col = _client.get_or_create_collection('skill_level')
 chunk_col = _client.get_or_create_collection('chunk_level')
@@ -56,7 +57,7 @@ def index_skill(skill: ParsedSkill) -> None:
 		metadatas=[{
 			'skill_id': skill_id,
 			'name': metadata.get('name', ''),
-			'requires_execution': str(metadata.get('requires_execution', False)),
+			'requires_execution': metadata.get('requires_execution', False),
 			'file_path': skill.file_path
 		}]
 	)
@@ -91,7 +92,7 @@ def index_skill(skill: ParsedSkill) -> None:
 			)
 
 
-def index_all_skills(skills_dir: str = embedding_config.SKILLS_DIR) -> int:
+def index_all_skills(skills_dir: str = dir_path.SKILLS_DIR) -> int:
 	skills = parse_all_skills(skills_dir)
 	ok = 0
 
@@ -103,7 +104,7 @@ def index_all_skills(skills_dir: str = embedding_config.SKILLS_DIR) -> int:
 			skill_id = skill.metadata.get('skill_id', skill.file_path)
 			warn(f"Failed to index skill {skill_id}: {e}")
 
-	print(f'[indexer] indexed {ok}/{len(skills)} skills to {embedding_config.CHROMA_DIR}')
+	print(f'[indexer] indexed {ok}/{len(skills)} skills to {dir_path.CHROMA_DIR}')
 	return ok
 
 

@@ -1,12 +1,13 @@
 # Configuration module for BEMI
 
 
-SKILLS_DIR = './skills'
-CHROMA_DIR    = './data/chroma'
+class dir_path:
+	SKILLS_DIR = './skills'
+	CHROMA_DIR    = './data/chroma'
 
 
 #* UNSLOTH MODEL CONFIGURATION
-class unsloth_model:
+class unsloth_gemma4_model:
 	GEMMA_4_MODEL_NAME = 'unsloth/gemma-4-E2B-it' # change to 'unsloth/gemma-4-E4B-it' if you want to use 4B model
 
 	GEMMA_4_PRETRAINED_PARAMS = {
@@ -31,7 +32,7 @@ class unsloth_model:
 	}
 
 
-class embedding:
+class embedding_model:
 	MODEL_NAME = 'embeddinggemma'
 	CHUNK_SIZE = 256
 	CHUNK_OVERLAP = 32
