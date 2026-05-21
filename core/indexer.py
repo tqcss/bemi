@@ -125,3 +125,8 @@ def drop_skill(skill_id: str) -> None:
 			chunk_col.delete(ids=existing_chunks['ids'])
 	except Exception as e:
 		warn(f'[indexer] failed to delete chunks for skill {skill_id} from chunk_col: {e}')
+
+
+# testing
+if __name__=='__main__':
+	index_all_skills(dir_path.SKILLS_DIR)
