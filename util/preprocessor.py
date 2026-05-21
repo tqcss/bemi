@@ -15,7 +15,7 @@ _STOPWORDS = set(stopwords.words('english'))
 
 def preprocess_markdown(text: str) -> str:
 	# strip markdown syntax
-	text = re.sub(r'#{1,6}\s', ' ', text) # headers
+	text = re.sub(r'#{1,6}\s*', ' ', text) # headers
 	text = re.sub(r'`{1,3}[^`]*`{1,3}', ' ', text) # inline & block code
 	text = re.sub(r'\*{1,2}([^*]+)\*{1,2}', r'\1', text) # bold & italic
 	text = re.sub(r'!\[.*?\]\(.*?\)', ' ', text) # images
