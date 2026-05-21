@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js';
 import { createSignal, For, Show, onMount, createEffect } from 'solid-js';
-import Sidebar from './Sidebar';
+import Sidebar from './components/Sidebar';
 
 interface Message {
   type: 'user' | 'assistant';
@@ -27,6 +27,8 @@ interface SkillFolder {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:5000';
+const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_BASE ?? 'http://localhost:11434';
+const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL ?? 'gemma4:e2b';
 
 const ChatUI: Component = () => {
   const [messages, setMessages] = createSignal<Message[]>([]);
@@ -37,14 +39,13 @@ const ChatUI: Component = () => {
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
   let messagesEndRef: HTMLDivElement | undefined;
   let inputRef: HTMLTextAreaElement | undefined;
+  let abortControllerRef: AbortController | null = null;
 
   const loadSkills = async () => {
     setLoadingSkills(true);
     try {
       const response = await fetch(`${API_BASE}/api/skills`);
-      if (!response.ok) {
-        throw new Error(`Failed to load skills: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Failed to load skills: ${response.statusText}`);
       const data = await response.json();
       setSkillFolders(data.skills || []);
     } catch (error) {
@@ -66,41 +67,6 @@ const ChatUI: Component = () => {
     }
   });
 
-  const sendMessage = () => {
-    if (!input().trim() || isGenerating()) return;
-
-    const userMessage: Message = { type: 'user', text: input() };
-    setMessages(prev => [...prev, userMessage]);
-    const userPrompt = input();
-    setInput('');
-    setIsGenerating(true);
-
-    // Add loading message
-    setMessages(prev => [...prev, { type: 'assistant', text: '', isLoading: true }]);
-
-    // Find the most relevant skill based on the prompt
-    const relevantSkill = findRelevantSkill(userPrompt);
-
-    // Simulate assistant response with skill context
-    setTimeout(() => {
-      const skillInfo = relevantSkill 
-        ? ` (using ${relevantSkill.folderName} skill with ${relevantSkill.scripts.length} helper script${relevantSkill.scripts.length !== 1 ? 's' : ''})`
-        : ' (no matching skills found)';
-
-      const assistantMessage: Message = {
-        type: 'assistant',
-        text: `This is a simulated response to your query${skillInfo}.\n\n${relevantSkill ? `Based on your prompt, I found the most relevant skill: **${relevantSkill.folderName}**\n\nSkill content preview: ${relevantSkill.skillMd.content.substring(0, 200)}...` : 'No specific skills matched your query.'}`,
-        sources: relevantSkill ? [`Skill: ${relevantSkill.folderName}`, ...relevantSkill.scripts.map(s => `Script: ${s.name}`)] : []
-      };
-
-      setMessages(prev => {
-        const filtered = prev.filter(m => !m.isLoading);
-        return [...filtered, assistantMessage];
-      });
-      setIsGenerating(false);
-    }, 1500);
-  };
-
   const findRelevantSkill = (prompt: string): SkillFolder | null => {
     const folders = skillFolders();
     if (folders.length === 0) return null;
@@ -117,28 +83,20 @@ const ChatUI: Component = () => {
 
       let score = 0;
 
-      if (promptLower.includes(folderName)) {
-        score += 10;
-      }
+      if (promptLower.includes(folderName)) score += 10;
 
-      const folderWords = folderName.split('-');
-      for (const word of folderWords) {
-        if (word.length > 2 && promptLower.includes(word)) {
-          score += 5;
-        }
+      for (const word of folderName.split('-')) {
+        if (word.length > 2 && promptLower.includes(word)) score += 5;
       }
 
       for (const word of promptWords) {
-        if (skillContent.includes(word)) {
-          score += 1;
-        }
+        if (skillContent.includes(word)) score += 1;
       }
 
-      const techTerms = ['function', 'class', 'method', 'variable', 'algorithm', 'data', 'structure', 'api', 'database', 'query', 'model', 'framework'];
+      const techTerms = ['function', 'class', 'method', 'variable', 'algorithm', 'data',
+        'structure', 'api', 'database', 'query', 'model', 'framework'];
       for (const term of techTerms) {
-        if (promptLower.includes(term) && skillContent.includes(term)) {
-          score += 2;
-        }
+        if (promptLower.includes(term) && skillContent.includes(term)) score += 2;
       }
 
       if (score > bestScore) {
@@ -148,6 +106,139 @@ const ChatUI: Component = () => {
     }
 
     return bestMatch;
+  };
+
+  const buildSystemPrompt = (skill: SkillFolder | null): string => {
+    if (!skill) {
+      return 'You are Bemi, a helpful AI assistant. Answer clearly and concisely.';
+    }
+
+    const scriptContext = skill.scripts.length > 0
+      ? `\n\nAvailable helper scripts:\n${skill.scripts.map(s =>
+          `- ${s.name}:\n\`\`\`\n${s.content}\n\`\`\``
+        ).join('\n')}`
+      : '';
+
+    return `You are Bemi, a helpful AI assistant. Use the following skill to guide your response.
+
+--- SKILL: ${skill.folderName} ---
+${skill.skillMd.content}${scriptContext}
+--- END SKILL ---
+
+Follow the skill's instructions and response guidance. Be helpful and concise.`;
+  };
+
+  const sendMessage = async () => {
+    if (!input().trim() || isGenerating()) return;
+
+    const userText = input().trim();
+    setInput('');
+    setIsGenerating(true);
+
+    const userMessage: Message = { type: 'user', text: userText };
+    setMessages(prev => [...prev, userMessage]);
+
+    // Add loading placeholder
+    setMessages(prev => [...prev, { type: 'assistant', text: '', isLoading: true }]);
+
+    const relevantSkill = findRelevantSkill(userText);
+    const systemPrompt = buildSystemPrompt(relevantSkill);
+
+    // Build message history for Ollama (exclude loading message)
+    const history = messages()
+      .filter(m => !m.isLoading)
+      .map(m => ({
+        role: m.type === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }));
+
+    abortControllerRef = new AbortController();
+
+    try {
+      const response = await fetch(`${OLLAMA_BASE}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortControllerRef.signal,
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          stream: true,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...history,
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ollama error: ${response.status} ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      // Replace loading message with empty assistant message to start streaming
+      setMessages(prev => {
+        const filtered = prev.filter(m => !m.isLoading);
+        return [...filtered, {
+          type: 'assistant',
+          text: '',
+          sources: relevantSkill
+            ? [`Skill: ${relevantSkill.folderName}`, ...relevantSkill.scripts.map(s => `Script: ${s.name}`)]
+            : [],
+        }];
+      });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(l => l.trim());
+
+        for (const line of lines) {
+          try {
+            const json = JSON.parse(line);
+            const token = json.message?.content ?? '';
+            fullText += token;
+
+            // Update the last assistant message in place
+            setMessages(prev => {
+              const updated = [...prev];
+              const lastIdx = updated.length - 1;
+              if (updated[lastIdx]?.type === 'assistant') {
+                updated[lastIdx] = { ...updated[lastIdx], text: fullText };
+              }
+              return updated;
+            });
+          } catch {
+            // skip malformed lines
+          }
+        }
+      }
+    } catch (error: unknown) {
+      if ((error as Error).name === 'AbortError') {
+        // user cancelled — leave text as-is
+      } else {
+        console.error('Ollama request failed:', error);
+        setMessages(prev => {
+          const filtered = prev.filter(m => !m.isLoading);
+          return [...filtered, {
+            type: 'assistant',
+            text: `⚠️ Could not reach Ollama at \`${OLLAMA_BASE}\`. Make sure Ollama is running and the model **${OLLAMA_MODEL}** is pulled.\n\nError: ${(error as Error).message}`,
+          }];
+        });
+      }
+    } finally {
+      abortControllerRef = null;
+      setIsGenerating(false);
+    }
+  };
+
+  const stopGeneration = () => {
+    abortControllerRef?.abort();
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,7 +251,6 @@ const ChatUI: Component = () => {
   const handleInput = (e: Event) => {
     const target = e.target as HTMLTextAreaElement;
     setInput(target.value);
-    // Auto-resize
     target.style.height = 'auto';
     target.style.height = Math.min(target.scrollHeight, 200) + 'px';
   };
@@ -169,10 +259,8 @@ const ChatUI: Component = () => {
     try {
       const response = await fetch(`${API_BASE}/api/skills/import`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ folderName, skillMdContent })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderName, skillMdContent }),
       });
       if (!response.ok) {
         const err = await response.text();
@@ -190,7 +278,7 @@ const ChatUI: Component = () => {
     if (!folder) return;
     try {
       const response = await fetch(`${API_BASE}/api/skills/${encodeURIComponent(folder.folderName)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
       if (!response.ok) {
         const err = await response.text();
@@ -206,15 +294,13 @@ const ChatUI: Component = () => {
   const handleAddScript = async (folderId: string, script: Script) => {
     const folder = skillFolders().find(f => f.id === folderId);
     if (!folder) return;
-
     const formData = new FormData();
     const blob = new Blob([script.content], { type: 'text/plain' });
     formData.append('file', blob, script.name);
-
     try {
       const response = await fetch(`${API_BASE}/api/skills/${encodeURIComponent(folder.folderName)}/scripts`, {
         method: 'POST',
-        body: formData
+        body: formData,
       });
       if (!response.ok) {
         const err = await response.text();
@@ -232,11 +318,11 @@ const ChatUI: Component = () => {
     if (!folder) return;
     const script = folder.scripts.find(s => s.id === scriptId);
     if (!script) return;
-
     try {
-      const response = await fetch(`${API_BASE}/api/skills/${encodeURIComponent(folder.folderName)}/scripts/${encodeURIComponent(script.name)}`, {
-        method: 'DELETE'
-      });
+      const response = await fetch(
+        `${API_BASE}/api/skills/${encodeURIComponent(folder.folderName)}/scripts/${encodeURIComponent(script.name)}`,
+        { method: 'DELETE' }
+      );
       if (!response.ok) {
         const err = await response.text();
         throw new Error(err || 'Could not delete script');
@@ -249,6 +335,7 @@ const ChatUI: Component = () => {
   };
 
   const clearChat = () => {
+    stopGeneration();
     setMessages([]);
   };
 
@@ -300,8 +387,11 @@ const ChatUI: Component = () => {
               </span>
             </Show>
           </div>
-
           <div class="flex items-center gap-2">
+            {/* Model badge */}
+            <span class="text-xs px-2 py-0.5 bg-bg-secondary rounded-full text-text-secondary hidden sm:block">
+              {OLLAMA_MODEL}
+            </span>
             <button
               onClick={clearChat}
               class="p-2 rounded-lg hover:bg-bg-hover transition-colors text-text-secondary"
@@ -342,7 +432,7 @@ const ChatUI: Component = () => {
             }
           >
             <For each={messages()}>
-              {(msg, index) => (
+              {(msg) => (
                 <div class={`py-6 px-4 ${msg.type === 'assistant' ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
                   <div class="max-w-3xl mx-auto flex gap-4">
                     {/* Avatar */}
@@ -365,7 +455,7 @@ const ChatUI: Component = () => {
                     {/* Message Content */}
                     <div class="flex-1 min-w-0">
                       <div class="text-sm font-medium mb-1 text-text-primary">
-                        {msg.type === 'user' ? 'You' : 'Assistant'}
+                        {msg.type === 'user' ? 'You' : 'Bemi'}
                       </div>
 
                       <Show when={msg.isLoading} fallback={
@@ -419,23 +509,27 @@ const ChatUI: Component = () => {
                 class="w-full bg-transparent text-text-primary placeholder-text-secondary px-4 py-3 pr-12 resize-none focus:outline-none text-sm max-h-[200px]"
                 disabled={isGenerating()}
               />
+              {/* Send / Stop button */}
               <button
-                onClick={sendMessage}
-                disabled={!input().trim() || isGenerating()}
+                onClick={isGenerating() ? stopGeneration : sendMessage}
+                disabled={!isGenerating() && !input().trim()}
                 class={`absolute right-3 bottom-3 p-1.5 rounded-lg transition-all ${
-                  input().trim() && !isGenerating()
+                  isGenerating()
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 cursor-pointer'
+                    : input().trim()
                     ? 'bg-accent text-white hover:bg-accent-hover cursor-pointer'
                     : 'bg-transparent text-text-secondary/50 cursor-not-allowed'
                 }`}
+                title={isGenerating() ? 'Stop generation' : 'Send message'}
               >
                 <Show when={isGenerating()} fallback={
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                 }>
-                  <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  {/* Stop icon */}
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
                   </svg>
                 </Show>
               </button>
