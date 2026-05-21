@@ -4,7 +4,7 @@ import spacy
 
 from typing import Dict
 from nltk.corpus import stopwords
-from dclass import PreprocessedText, ParsedSkill
+from .dclass import PreprocessedText, ParsedSkill
 
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
