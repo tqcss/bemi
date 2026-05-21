@@ -5,7 +5,6 @@ from typing import List
 from pathlib import Path
 from warnings import warn
 from util.dclass import ParsedSkill
-from default_api import glob
 
 
 def parse_skill(file_path: str) -> ParsedSkill:
@@ -103,27 +102,27 @@ def parse_skill(file_path: str) -> ParsedSkill:
 
 
 def parse_all_skills(skills_dir: str) -> List[ParsedSkill]:
-    all_skill_paths = glob(pattern="**/SKILL.md", dir_path=skills_dir)
-    filtered_paths = []
-    for path_dict in all_skill_paths['output']:
-        file_path = path_dict['path']
-        relative_path = Path(file_path).relative_to(skills_dir)
-        should_include = True
-        for part in relative_path.parts:
-            if part.startswith('.'):
-                should_include = False
-                break
-        if should_include:
-            filtered_paths.append(file_path)
+	# find all SKILL.md files under skills_dir
+	filtered_paths = []
+	skills_path = Path(skills_dir)
+	for p in skills_path.rglob('SKILL.md'):
+		try:
+			relative_path = p.relative_to(skills_dir)
+		except Exception:
+			relative_path = p
+		# skip hidden files and dirs
+		should_include = all(not part.startswith('.') for part in relative_path.parts)
+		if should_include:
+			filtered_paths.append(str(p))
 
-    skills = []
-    for path in filtered_paths:
-        try:
-            skills.append(parse_skill(str(path)))
-        except Exception as e:
-            warn(f'failed to parse {path}, ignoring skill: {e}')
+	skills = []
+	for path in filtered_paths:
+		try:
+			skills.append(parse_skill(str(path)))
+		except Exception as e:
+			warn(f'failed to parse {path}, ignoring skill: {e}')
 
-    return skills
+	return skills
 
 
 def get_skill_run_code(skill: ParsedSkill) -> str:
