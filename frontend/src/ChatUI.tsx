@@ -4,9 +4,12 @@ import Sidebar from './components/Sidebar';
 
 interface Stats {
   totalDurationMs: number;
+  loadDurationMs: number;
+  promptEvalCount: number;
+  promptEvalDurationMs: number;
+  promptTokensPerSec: number;
   evalCount: number;
   evalDurationMs: number;
-  promptEvalCount: number;
   tokensPerSec: number;
 }
 
@@ -75,6 +78,7 @@ const ThinkingBlock: Component<{ thinking: string }> = (props) => {
 const StatsBar: Component<{ stats: Stats }> = (props) => {
   const [open, setOpen] = createSignal(false);
   const fmt = (n: number, d = 1) => n.toFixed(d);
+  const s = props.stats;
   return (
     <div class="mt-3 pt-3 border-t border-border/20">
       <button
@@ -88,22 +92,38 @@ const StatsBar: Component<{ stats: Stats }> = (props) => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
         <span>
-          {fmt(props.stats.tokensPerSec)} tok/s · {fmt(props.stats.totalDurationMs / 1000)}s
+          {fmt(s.tokensPerSec)} tok/s · {fmt(s.totalDurationMs / 1000)}s
         </span>
       </button>
       <Show when={open()}>
-        <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { label: 'Total time', value: `${fmt(props.stats.totalDurationMs / 1000)}s` },
-            { label: 'Tokens/sec', value: fmt(props.stats.tokensPerSec) },
-            { label: 'Output tokens', value: String(props.stats.evalCount) },
-            { label: 'Prompt tokens', value: String(props.stats.promptEvalCount) },
-          ].map(item => (
-            <div class="bg-bg-primary/60 rounded-lg px-3 py-2 border border-border/30">
-              <p class="text-xs text-text-secondary/50 mb-0.5">{item.label}</p>
-              <p class="text-sm font-medium text-text-secondary">{item.value}</p>
-            </div>
-          ))}
+        <div class="mt-2 space-y-2">
+          {/* Timing row */}
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { label: 'Total time',   value: `${fmt(s.totalDurationMs / 1000)}s` },
+              { label: 'Load time',    value: `${fmt(s.loadDurationMs / 1000)}s` },
+              { label: 'Eval time',    value: `${fmt(s.evalDurationMs / 1000)}s` },
+            ].map(item => (
+              <div class="bg-bg-primary/60 rounded-lg px-3 py-2 border border-border/30">
+                <p class="text-xs text-text-secondary/50 mb-0.5">{item.label}</p>
+                <p class="text-sm font-medium text-text-secondary">{item.value}</p>
+              </div>
+            ))}
+          </div>
+          {/* Token row */}
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { label: 'Output tokens',  value: String(s.evalCount) },
+              { label: 'Output tok/s',   value: fmt(s.tokensPerSec) },
+              { label: 'Prompt tokens',  value: String(s.promptEvalCount) },
+              { label: 'Prompt tok/s',   value: fmt(s.promptTokensPerSec) },
+            ].map(item => (
+              <div class="bg-bg-primary/60 rounded-lg px-3 py-2 border border-border/30">
+                <p class="text-xs text-text-secondary/50 mb-0.5">{item.label}</p>
+                <p class="text-sm font-medium text-text-secondary">{item.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </Show>
     </div>
@@ -269,14 +289,19 @@ const ChatUI: Component = () => {
 
             // Final chunk — attach stats
             if (json.done && json.eval_count != null) {
-              const totalMs = (json.total_duration ?? 0) / 1e6;
-              const evalMs = (json.eval_duration ?? 0) / 1e6;
+              const totalMs      = (json.total_duration       ?? 0) / 1e6;
+              const loadMs       = (json.load_duration        ?? 0) / 1e6;
+              const evalMs       = (json.eval_duration        ?? 0) / 1e6;
+              const promptEvalMs = (json.prompt_eval_duration ?? 0) / 1e6;
               const stats: Stats = {
-                totalDurationMs: totalMs,
-                evalCount: json.eval_count,
-                evalDurationMs: evalMs,
-                promptEvalCount: json.prompt_eval_count ?? 0,
-                tokensPerSec: evalMs > 0 ? (json.eval_count / evalMs) * 1000 : 0,
+                totalDurationMs:      totalMs,
+                loadDurationMs:       loadMs,
+                promptEvalCount:      json.prompt_eval_count ?? 0,
+                promptEvalDurationMs: promptEvalMs,
+                promptTokensPerSec:   promptEvalMs > 0 ? ((json.prompt_eval_count ?? 0) / promptEvalMs) * 1000 : 0,
+                evalCount:            json.eval_count,
+                evalDurationMs:       evalMs,
+                tokensPerSec:         evalMs > 0 ? (json.eval_count / evalMs) * 1000 : 0,
               };
               updateLastAssistant(m => ({ ...m, stats }));
             }
