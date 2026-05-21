@@ -1,4 +1,5 @@
 # Configuration module for BEMI
+from warnings import warn
 
 
 class dir_path:
@@ -36,3 +37,12 @@ class embedding_model:
 	MODEL_NAME = 'embeddinggemma'
 	CHUNK_SIZE = 256
 	CHUNK_OVERLAP = 32
+
+	TOP_K_SKILLS = 3
+	TOP_J_CHUNKS = 3
+
+	def get_confidence_threshold() -> float:
+		warn('reminder to adjust retrieval confidence threshold based on evaluation performance')
+		return 1.5
+	CONFIDENCE_THRESHOLD = get_confidence_threshold()
+	# CONFIDENCE_THRESHOLD = 0.40
