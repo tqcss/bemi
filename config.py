@@ -46,3 +46,8 @@ class embedding_model:
 		return 1.5
 	CONFIDENCE_THRESHOLD = get_confidence_threshold()
 	# CONFIDENCE_THRESHOLD = 0.40
+
+
+class intent_classifier:
+	MODEL_PATH = './models/intent_classifier.pkl'
+	VEC_PATH   = './models/intent_vectorizer.pkl'
