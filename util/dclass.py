@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass
@@ -32,3 +33,31 @@ class RetrievedSkill:
 class RetrievalResults:
 	skills: List[RetrievedSkill] = field(default_factory=list)
 	fallback: bool = True
+
+@dataclass
+class Parameter:
+    name: str
+    ptype: str
+    description: str
+    required: bool = False
+    default: Any = None
+
+@dataclass
+class ExecutionResult:
+    status: str
+    output: str
+    executed_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+
+@dataclass
+class PlanStep:
+    step: int
+    skill_id: str
+    params: Dict[str, Any]
+    output_key: str
+
+@dataclass
+class Plan:
+    steps: List[PlanStep] = field(default_factory=list)
+
+
+

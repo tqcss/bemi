@@ -201,14 +201,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
   return (
     <>
-      <div class="w-[260px] bg-bg-sidebar text-text-primary h-screen flex flex-col border-r border-border/30">
+      <div class="w-[260px] bg-zinc-50 text-zinc-900 h-screen flex flex-col border-r border-zinc-200">
         {/* New Chat Button */}
         <div class="p-3">
           <button
             onClick={props.onNewChat}
-            class="w-full flex items-center gap-3 px-3 py-3 border border-border/50 rounded-lg hover:bg-bg-hover transition-colors text-sm font-medium"
+            class="w-full flex items-center gap-3 px-3 py-2.5 bg-white border border-zinc-200 rounded-lg hover:border-zinc-300 transition-colors text-sm font-medium shadow-sm"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             New chat
@@ -219,9 +219,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
         <div class="px-3 pb-2">
           <button
             onClick={props.onToggleSidebar}
-            class="w-full flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors text-sm"
+            class="w-full flex items-center gap-3 px-3 py-2 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors text-sm"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
             Close sidebar
@@ -231,19 +231,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
         <div class="flex-1 overflow-y-auto px-3 py-2">
           {/* Section Header */}
           <div class="flex items-center justify-between mb-2 px-2">
-            <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Skills & Knowledge</h3>
-            <span class="text-xs text-text-secondary/60">{props.folders.length}</span>
+            <h3 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Skills</h3>
+            <span class="text-[11px] font-medium text-zinc-400">{props.folders.length}</span>
           </div>
 
           <Show
             when={props.folders.length > 0}
             fallback={
               <div class="px-2 py-4 text-center">
-                <svg class="w-8 h-8 mx-auto mb-2 text-text-secondary/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <p class="text-xs text-text-secondary/60 leading-relaxed">
-                  No skills imported yet.<br/>Import a folder to get started.
+                <p class="text-xs text-zinc-400 leading-relaxed">
+                  No skills imported yet.
                 </p>
               </div>
             }
@@ -255,18 +252,18 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
                   return (
                     <div 
-                      class="rounded-lg overflow-hidden border border-transparent hover:border-border/50 transition-colors"
+                      class="rounded-lg overflow-hidden transition-colors"
                       onMouseEnter={() => setHoveredFolder(folder.id)}
                       onMouseLeave={() => setHoveredFolder(null)}
                     >
                       {/* Folder Header */}
-                      <div class="flex items-center gap-2 px-2 py-2 hover:bg-bg-hover transition-colors cursor-pointer">
+                      <div class="flex items-center gap-2 px-2 py-2 hover:bg-zinc-100 transition-colors cursor-pointer rounded-md">
                         <button
                           onClick={() => toggleFolder(folder.id)}
-                          class="text-text-secondary hover:text-text-primary transition-colors"
+                          class="text-zinc-400 hover:text-zinc-700 transition-colors"
                         >
                           <svg 
-                            class={`w-4 h-4 transition-transform ${isExpanded() ? 'rotate-90' : ''}`} 
+                            class={`w-3.5 h-3.5 transition-transform ${isExpanded() ? 'rotate-90' : ''}`} 
                             fill="none" 
                             stroke="currentColor" 
                             viewBox="0 0 24 24"
@@ -276,10 +273,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         </button>
 
                         <div class="flex-1 min-w-0">
-                          <p class="text-sm text-text-primary truncate">{folder.folderName}</p>
-                          <p class="text-xs text-text-secondary/60">
-                            {folder.scripts.length} script{folder.scripts.length !== 1 ? 's' : ''}
-                          </p>
+                          <p class="text-sm font-medium text-zinc-700 truncate">{folder.folderName}</p>
                         </div>
 
                         <button
@@ -291,11 +285,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           }}
                           class={`p-1 rounded transition-all ${
                             hoveredFolder() === folder.id 
-                              ? 'opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10' 
+                              ? 'opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50' 
                               : 'opacity-0'
                           }`}
                         >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -303,14 +297,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
                       {/* Folder Contents */}
                       <Show when={isExpanded()}>
-                        <div class="bg-bg-primary/50 px-2 py-2 space-y-1">
+                        <div class="px-2 py-1 space-y-0.5 border-l border-zinc-200 ml-5">
                           {/* SKILL.md */}
-                          <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-secondary/50">
-                            <svg class="w-4 h-4 text-yellow-500/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span class="text-xs text-text-secondary truncate">SKILL.md</span>
-                            <span class="text-xs text-text-secondary/40 ml-auto">{folder.skillMd.content.split('\n').length} lines</span>
+                          <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-zinc-50/50">
+                            <span class="text-xs text-zinc-500 truncate">SKILL.md</span>
+                            <span class="text-[10px] text-zinc-400 ml-auto">{folder.skillMd.content.split('\n').length} lines</span>
                           </div>
 
                           {/* Scripts */}
@@ -318,14 +309,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                             <div class="space-y-0.5">
                               <For each={folder.scripts}>
                                 {(script) => (
-                                  <div class="group flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-hover transition-colors">
-                                    <svg class="w-4 h-4 text-blue-400/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                    </svg>
-                                    <span class="text-xs text-text-secondary/80 truncate flex-1">{script.name}</span>
+                                  <div class="group flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 transition-colors">
+                                    <span class="text-xs text-zinc-600 truncate flex-1">{script.name}</span>
                                     <button
                                       onClick={() => props.onRemoveScript(folder.id, script.id)}
-                                      class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-all"
+                                      class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-50 text-red-400 transition-all"
                                     >
                                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -338,13 +326,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           </Show>
 
                           {/* Add Script */}
-                          <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-hover transition-colors cursor-pointer text-text-secondary/60 hover:text-text-secondary">
+                          <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 transition-colors cursor-pointer text-zinc-400 hover:text-zinc-600">
                             <input
                               type="file"
                               onChange={(e) => handleAddScript(folder.id, e)}
                               class="hidden"
                             />
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                             </svg>
                             <span class="text-xs">Add script</span>
@@ -360,15 +348,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
         </div>
 
         {/* Bottom Actions */}
-        <div class="p-3 border-t border-border/30 space-y-1">
+        <div class="p-3 border-t border-zinc-200">
           <button
             onClick={() => setShowImportModal(true)}
-            class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-bg-hover rounded-lg transition-colors text-sm text-text-secondary hover:text-text-primary"
+            class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-100 rounded-lg transition-colors text-sm text-zinc-600 hover:text-zinc-900"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            Import Skill Folder
+            Import Skill
           </button>
         </div>
       </div>

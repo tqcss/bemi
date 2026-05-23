@@ -55,8 +55,8 @@ venv.bak/
 .pypirc
 
 # Data
-data/
-models/
+data/*
+models/*
 
 # Frontend Dependencies
 /node_modules
@@ -72,3 +72,12 @@ models/
 # System Files
 .DS_Store
 Thumbs.db
+
+# Keep Files
+!.gitkeep
+
+.gitignore
+*.log
+
+skills/
+!skills/.template

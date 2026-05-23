@@ -7,6 +7,10 @@ class dir_path:
 	CHROMA_DIR    = './data/chroma'
 
 
+DEFAULT_TIMEOUT = 10
+LLM_MODEL_NAME = "gemma4:e2b"
+
+
 #* UNSLOTH MODEL CONFIGURATION
 class unsloth_gemma4_model:
 	GEMMA_4_MODEL_NAME = 'unsloth/gemma-4-E2B-it' # change to 'unsloth/gemma-4-E4B-it' if you want to use 4B model
@@ -51,3 +55,12 @@ class embedding_model:
 class intent_classifier:
 	MODEL_PATH = './models/intent_classifier.pkl'
 	VEC_PATH   = './models/intent_vectorizer.pkl'
+
+
+class planner_config:
+    CHAIN_KEYWORDS = [
+        r"\band then\b", r"\bthen format\b", r"\bthen save\b",
+        r"\bafter that\b", r"\band format\b", r"\band save\b",
+        r"\bfollowed by\b", r"\bnext,\b", r"\bafter which\b",
+    ]
+	

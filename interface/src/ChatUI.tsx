@@ -39,7 +39,7 @@ interface SkillFolder {
   scripts: Script[];
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:5000';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
 const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_BASE ?? 'http://localhost:11434';
 const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL ?? 'gemma4:e2b';
 
@@ -231,95 +231,40 @@ const ChatUI: Component = () => {
     abortControllerRef = new AbortController();
 
     try {
-      const response = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abortControllerRef.signal,
         body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          stream: true,
-          think: true,
-          messages: [{ role: 'system', content: systemPrompt }, ...history],
+          query: systemPrompt + " " + history.map(h => h.content).join(" "),
         }),
       });
 
-      if (!response.ok) throw new Error(`Ollama error: ${response.status} ${response.statusText}`);
+      if (!response.ok) throw new Error(`Backend error: ${response.status} ${response.statusText}`);
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
+      const data = await response.json();
+      const assistantText = data.response;
 
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let fullThinking = '';
-
-      // Replace the loading placeholder with an actual streaming message
       setMessages(prev => {
         const filtered = prev.filter(m => !m.isLoading);
         return [...filtered, {
           type: 'assistant',
-          text: '',
-          thinking: '',
+          text: assistantText,
           sources: relevantSkill
             ? [`Skill: ${relevantSkill.folderName}`, ...relevantSkill.scripts.map(s => `Script: ${s.name}`)]
             : [],
         }];
       });
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-
-        for (const line of chunk.split('\n').filter(l => l.trim())) {
-          try {
-            const json = JSON.parse(line);
-            const msg = json.message ?? {};
-
-            // Accumulate thinking tokens (reasoning models stream these separately)
-            if (msg.thinking) {
-              fullThinking += msg.thinking;
-              updateLastAssistant(m => ({ ...m, thinking: fullThinking }));
-            }
-
-            // Accumulate response tokens
-            if (msg.content) {
-              fullText += msg.content;
-              updateLastAssistant(m => ({ ...m, text: fullText }));
-            }
-
-            // Final chunk — attach stats
-            if (json.done && json.eval_count != null) {
-              const totalMs      = (json.total_duration       ?? 0) / 1e6;
-              const loadMs       = (json.load_duration        ?? 0) / 1e6;
-              const evalMs       = (json.eval_duration        ?? 0) / 1e6;
-              const promptEvalMs = (json.prompt_eval_duration ?? 0) / 1e6;
-              const stats: Stats = {
-                totalDurationMs:      totalMs,
-                loadDurationMs:       loadMs,
-                promptEvalCount:      json.prompt_eval_count ?? 0,
-                promptEvalDurationMs: promptEvalMs,
-                promptTokensPerSec:   promptEvalMs > 0 ? ((json.prompt_eval_count ?? 0) / promptEvalMs) * 1000 : 0,
-                evalCount:            json.eval_count,
-                evalDurationMs:       evalMs,
-                tokensPerSec:         evalMs > 0 ? (json.eval_count / evalMs) * 1000 : 0,
-              };
-              updateLastAssistant(m => ({ ...m, stats }));
-            }
-          } catch {
-            // skip malformed JSON lines
-          }
-        }
-      }
     } catch (error: unknown) {
       if ((error as Error).name === 'AbortError') {
-        // user cancelled — text stays as-is
+        // user cancelled
       } else {
-        console.error('Ollama request failed:', error);
+        console.error('Request failed:', error);
         setMessages(prev => {
           const filtered = prev.filter(m => !m.isLoading);
           return [...filtered, {
             type: 'assistant',
-            text: `⚠️ Could not reach Ollama at \`${OLLAMA_BASE}\`. Make sure Ollama is running and the model **${OLLAMA_MODEL}** is pulled.\n\nError: ${(error as Error).message}`,
+            text: `⚠️ Could not reach Bemi. Error: ${(error as Error).message}`,
           }];
         });
       }
@@ -412,7 +357,7 @@ const ChatUI: Component = () => {
   return (
     <div class="flex h-screen bg-bg-primary text-text-primary overflow-hidden">
       <Show when={sidebarOpen()}>
-        <div class="w-[260px] flex-shrink-0">
+        <div class="w-[260px] flex-shrink-0 bg-bg-sidebar">
           <Sidebar
             folders={skillFolders()}
             onDeleteFolder={handleDeleteFolder}
@@ -487,13 +432,13 @@ const ChatUI: Component = () => {
                     {/* Avatar */}
                     <div class="flex-shrink-0">
                       {msg.type === 'user' ? (
-                        <div class="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center">
-                          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center">
+                          <svg class="w-5 h-5 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
                       ) : (
-                        <div class="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
+                        <div class="w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center">
                           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                           </svg>
@@ -503,33 +448,30 @@ const ChatUI: Component = () => {
 
                     {/* Content */}
                     <div class="flex-1 min-w-0">
-                      <div class="text-sm font-medium mb-1 text-text-primary">
+                      <div class="text-sm font-semibold mb-1 text-stone-900">
                         {msg.type === 'user' ? 'You' : 'Bemi'}
                       </div>
 
                       <Show when={msg.isLoading} fallback={
                         <div>
-                          {/* Thinking block — only shown when there's thinking content */}
+                          {/* Thinking block */}
                           <Show when={msg.thinking && msg.thinking.trim().length > 0}>
                             <ThinkingBlock thinking={msg.thinking!} />
                           </Show>
 
                           {/* Response text */}
-                          <div class="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">
+                          <div class="text-stone-800 text-sm leading-relaxed whitespace-pre-wrap">
                             {msg.text}
                           </div>
 
                           {/* Sources */}
                           <Show when={msg.sources && msg.sources.length > 0}>
-                            <div class="mt-3 pt-3 border-t border-border/30">
-                              <p class="text-xs text-text-secondary mb-2 font-medium">Sources used:</p>
+                            <div class="mt-4 pt-4 border-t border-stone-100">
+                              <p class="text-xs text-stone-500 mb-2 font-medium">Sources:</p>
                               <div class="flex flex-wrap gap-2">
                                 <For each={msg.sources}>
                                   {(source) => (
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-bg-primary border border-border/50 text-xs text-text-secondary">
-                                      <svg class="w-3 h-3 mr-1 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                      </svg>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-stone-50 border border-stone-200 text-xs text-stone-600">
                                       {source}
                                     </span>
                                   )}
@@ -538,7 +480,7 @@ const ChatUI: Component = () => {
                             </div>
                           </Show>
 
-                          {/* Stats — only shown when generation is done and stats exist */}
+                          {/* Stats */}
                           <Show when={msg.stats}>
                             <StatsBar stats={msg.stats!} />
                           </Show>
@@ -578,7 +520,7 @@ const ChatUI: Component = () => {
               <button
                 onClick={isGenerating() ? stopGeneration : sendMessage}
                 disabled={!isGenerating() && !input().trim()}
-                class={`absolute right-3 bottom-3 p-1.5 rounded-lg transition-all ${
+                class={`absolute right-3 bottom-2 p-1.5 rounded-lg transition-all rotate-90 ${
                   isGenerating()
                     ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 cursor-pointer'
                     : input().trim()
@@ -589,7 +531,7 @@ const ChatUI: Component = () => {
               >
                 <Show when={isGenerating()} fallback={
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                   </svg>
                 }>
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
